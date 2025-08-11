@@ -85,7 +85,7 @@ atlas-linter/
 ## 💡 Atlas Connection String Format
 
 ```
-mongodb+srv://username:password@cluster-name.xxxxx.mongodb.net/database?retryWrites=true&w=majority
+mongodb+srv://username:password@yyyy.xxxxx.mongodb.net/
 ```
 
 ## 🧪 Testing
