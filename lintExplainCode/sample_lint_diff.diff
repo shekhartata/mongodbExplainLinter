@@ -1,0 +1,125 @@
+diff --git a/src/users.py b/src/users.py
+index a1b2c3d..e4f5g6h 100644
+--- a/src/users.py
++++ b/src/users.py
+@@ -15,7 +15,7 @@ def get_active_users():
+-    return db.users.find({'status': 'active'})
++    return db.users.find({'status': 'active', 'role': 'user'})
+@@ -25,8 +25,8 @@ def get_users_by_department():
+-    return db.users.find({'department': department})
++    return db.users.find({'department': department, 'status': 'active'})
+@@ -35,5 +35,5 @@ def find_user_by_email():
+-    return db.users.findOne({'email': email})
++    return db.users.findOne({'email': email, 'status': 'active'})
+@@ -45,7 +45,7 @@ def get_users_with_role():
+-    return db.users.find({'role': role})
++    return db.users.find({'role': role, 'department': department})
+
+diff --git a/src/products.py b/src/products.py
+index h7i8j9k..l0m1n2o 100644
+--- a/src/products.py
++++ b/src/products.py
+@@ -20,8 +20,8 @@ def get_electronics_products():
+-    return db.products.find({'category': 'electronics'})
++    return db.products.find({'category': 'electronics', 'price': {'$lt': 1000}})
+@@ -30,8 +30,8 @@ def get_products_by_brand():
+-    return db.products.find({'brand': brand})
++    return db.products.find({'brand': brand, 'rating': {'$gte': 4.0}})
+@@ -40,5 +40,5 @@ def search_products():
+-    return db.products.find({'name': {'$regex': search_term}})
++    return db.products.find({'name': {'$regex': search_term}, 'stock': {'$gt': 0}})
+@@ -50,7 +50,7 @@ def get_expensive_products():
+-    return db.products.find({'price': {'$gt': 500}})
++    return db.products.find({'price': {'$gt': 500}, 'category': 'electronics'})
+
+diff --git a/src/orders.py b/src/orders.py
+index p3q4r5s..t6u7v8w 100644
+--- a/src/orders.py
++++ b/src/orders.py
+@@ -15,7 +15,7 @@ def get_user_orders():
+-    return db.orders.find({'user_id': user_id})
++    return db.orders.find({'user_id': user_id, 'status': 'completed'})
+@@ -25,8 +25,8 @@ def get_orders_by_status():
+-    return db.orders.find({'status': status})
++    return db.orders.find({'status': status, 'total': {'$gt': 100}})
+@@ -35,5 +35,5 @@ def get_recent_orders():
+-    return db.orders.find({'created_at': {'$gte': start_date}})
++    return db.orders.find({'created_at': {'$gte': start_date}, 'status': 'shipped'})
+@@ -45,7 +45,7 @@ def get_orders_by_user_and_status():
+-    return db.orders.find({'user_id': user_id, 'status': status})
++    return db.orders.aggregate([
++        {'$match': {'user_id': user_id, 'status': status}},
++        {'$sort': {'created_at': -1}},
++        {'$limit': 10}
++    ])
+
+diff --git a/src/analytics.py b/src/analytics.py
+index x9y0z1a..b2c3d4e 100644
+--- a/src/analytics.py
++++ b/src/analytics.py
+@@ -10,8 +10,8 @@ def get_user_stats():
+-    return db.users.aggregate([
+-        {'$match': {'status': 'active'}},
+-        {'$group': {'_id': '$role', 'count': {'$sum': 1}}}
+-    ])
++    return db.users.aggregate([
++        {'$match': {'status': 'active', 'department': {'$in': ['engineering', 'marketing']}}},
++        {'$group': {'_id': '$role', 'count': {'$sum': 1}}},
++        {'$sort': {'count': -1}}
++    ])
+@@ -20,8 +20,8 @@ def get_product_stats():
+-    return db.products.aggregate([
+-        {'$match': {'category': 'electronics'}},
+-        {'$group': {'_id': '$brand', 'avg_price': {'$avg': '$price'}}}
+-    ])
++    return db.products.aggregate([
++        {'$match': {'category': 'electronics', 'stock': {'$gt': 0}}},
++        {'$group': {'_id': '$brand', 'avg_price': {'$avg': '$price'}, 'total_stock': {'$sum': '$stock'}}},
++        {'$sort': {'avg_price': -1}}
++    ])
+@@ -30,8 +30,8 @@ def get_order_stats():
+-    return db.orders.aggregate([
+-        {'$match': {'status': 'completed'}},
+-        {'$group': {'_id': '$status', 'total_revenue': {'$sum': '$total'}}}
+-    ])
++    return db.orders.aggregate([
++        {'$match': {'status': 'completed', 'total': {'$gt': 50}}},
++        {'$group': {'_id': '$status', 'total_revenue': {'$sum': '$total'}, 'order_count': {'$sum': 1}}},
++        {'$sort': {'total_revenue': -1}}
++    ])
+
+diff --git a/src/search.py b/src/search.py
+index f5g6h7i..j8k9l0m 100644
+--- a/src/search.py
++++ b/src/search.py
+@@ -15,7 +15,7 @@ def search_users():
+-    return db.users.find({'username': {'$regex': search_term}})
++    return db.users.find({'username': {'$regex': search_term}, 'status': 'active'})
+@@ -25,8 +25,8 @@ def search_products():
+-    return db.products.find({'name': {'$regex': search_term, '$options': 'i'}})
++    return db.products.find({'name': {'$regex': search_term, '$options': 'i'}, 'category': 'electronics'})
+@@ -35,5 +35,5 @@ def search_orders():
+-    return db.orders.find({'order_id': {'$regex': search_term}})
++    return db.orders.find({'order_id': {'$regex': search_term}, 'status': 'completed'})
+
+diff --git a/src/admin.py b/src/admin.py
+index n1o2p3q..r4s5t6u 100644
+--- a/src/admin.py
++++ b/src/admin.py
+@@ -10,8 +10,8 @@ def get_all_users():
+-    return db.users.find({})
++    return db.users.find({}, {'password': 0, 'email': 0})
+@@ -20,8 +20,8 @@ def get_all_products():
+-    return db.products.find({})
++    return db.products.find({}, {'internal_notes': 0, 'cost_price': 0})
+@@ -30,8 +30,8 @@ def get_all_orders():
+-    return db.orders.find({})
++    return db.orders.find({}, {'payment_details': 0, 'shipping_address': 0})
+@@ -40,7 +40,7 @@ def get_system_stats():
+-    return db.users.aggregate([
+-        {'$count': 'total_users'}
+-    ])
++    return db.users.aggregate([
++        {'$match': {'status': 'active'}},
++        {'$count': 'total_users'}
++    ])
