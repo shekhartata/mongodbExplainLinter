@@ -40,10 +40,11 @@ python atlas_cli.py lint-pr -f diff.diff --fail-on-issues
 ## 📋 What It Does
 
 1. **Connects to your Atlas cluster**
-2. **Creates sample collections** with realistic data and indexes if none exist
-3. **Extracts MongoDB queries** from PR diffs
-4. **Runs explain plans** with executionStats on each query
-5. **Detects performance issues**:
+2. If using atlas_linter, it **Creates sample collections** with realistic data and indexes if none exist
+3. If using client_linter, it pulls data from staging / pre-prod.
+4. **Extracts MongoDB queries** from PR diffs
+5. **Runs explain plans** with executionStats on each query
+6. **Detects performance issues**:
    - Collection scans (HIGH severity)
    - Slow queries > 100ms (MEDIUM severity)
    - Large document scans > 1000 docs (MEDIUM severity)
